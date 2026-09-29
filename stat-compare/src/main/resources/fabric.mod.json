@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "statcompare",
+  "version": "${version}",
+  "name": "Stat Compare",
+  "description": "Shows a colour-coded stat comparison in the tooltip: armour against what's equipped, weapons and tools against what's in your hand.",
+  "authors": [],
+  "license": "MIT",
+  "icon": "assets/statcompare/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.statcompare.StatCompareClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
