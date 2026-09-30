@@ -28,11 +28,13 @@ public final class StatCompare {
     }
 
     /**
-     * The item to compare {@code hovered} against, or null if it isn't the kind of item this mod
-     * compares: only armour and tools (which includes weapons like swords, axes and tridents,
-     * detected by having a Tool component or attribute modifiers - the same components that give
-     * them their combat/mining stats in the first place). Armour compares against the equipped
-     * piece in the same slot; tools compare against whatever is in the main hand.
+     * The item to compare {@code hovered} against, or null if there's nothing sensible to compare
+     * it with. Armour (helmet/chestplate/leggings/boots) compares against the equipped piece in
+     * the same slot. Anything else compares against the main hand item, but only when that main
+     * hand item is itself a tool (including weapons like swords, axes and tridents, detected by
+     * having a Tool component or attribute modifiers) - so hovering a random item while your hand
+     * is empty or holding something unrelated shows nothing, but hovering *anything*, tool or not,
+     * while holding a tool shows how it stacks up against what's in your hand.
      */
     public static ItemStack findReference(Player player, ItemStack hovered) {
         Equippable equippable = hovered.get(DataComponents.EQUIPPABLE);
@@ -44,8 +46,9 @@ public final class StatCompare {
             }
             return null;
         }
-        if (hovered.get(DataComponents.TOOL) != null || hovered.get(DataComponents.ATTRIBUTE_MODIFIERS) != null) {
-            return player.getItemBySlot(EquipmentSlot.MAINHAND);
+        ItemStack mainhand = player.getItemBySlot(EquipmentSlot.MAINHAND);
+        if (mainhand.get(DataComponents.TOOL) != null || mainhand.get(DataComponents.ATTRIBUTE_MODIFIERS) != null) {
+            return mainhand;
         }
         return null;
     }
@@ -70,32 +73,37 @@ public final class StatCompare {
     private static List<Line> buildLines(ItemStack hovered, ItemStack reference) {
         List<Line> lines = new ArrayList<>();
 
-        Map<String, Double> hoveredAttrs = attributeTotals(hovered);
-        Map<String, Double> referenceAttrs = attributeTotals(reference);
-        Map<String, Component> names = new LinkedHashMap<>();
-        collectAttributeNames(hovered, names);
-        collectAttributeNames(reference, names);
-        for (Map.Entry<String, Component> entry : names.entrySet()) {
-            double hv = hoveredAttrs.getOrDefault(entry.getKey(), 0.0);
-            double rv = referenceAttrs.getOrDefault(entry.getKey(), 0.0);
-            if (Math.abs(hv) < EPSILON && Math.abs(rv) < EPSILON) {
-                continue;
-            }
-            lines.add(new Line(entry.getValue().getString(), hv, rv, ""));
+        // every attribute either item actually carries a modifier for, keyed by id so both
+        // sides line up even if only one of them touches that attribute
+        Map<String, Holder<Attribute>> attrHolders = new LinkedHashMap<>();
+        collectAttributeHolders(hovered, attrHolders);
+        collectAttributeHolders(reference, attrHolders);
+        Map<String, Double> hoveredMods = attributeModifierTotals(hovered);
+        Map<String, Double> referenceMods = attributeModifierTotals(reference);
+        for (Map.Entry<String, Holder<Attribute>> entry : attrHolders.entrySet()) {
+            Holder<Attribute> holder = entry.getValue();
+            // the item's effective value for this attribute, the same number the vanilla advanced
+            // tooltip (F3+H) shows: the attribute's own base value plus this item's modifiers.
+            // Some modifiers (e.g. attack speed) are negative, so showing just the raw modifier
+            // (like "-2.4") reads as nonsense; the base-inclusive total (like "1.6") is the real,
+            // comparable number.
+            double base = holder.value().getDefaultValue();
+            double hv = base + hoveredMods.getOrDefault(entry.getKey(), 0.0);
+            double rv = base + referenceMods.getOrDefault(entry.getKey(), 0.0);
+            lines.add(new Line(Component.translatable(holder.value().getDescriptionId()).getString(), hv, rv, ""));
         }
 
         int hoveredDurability = hovered.getMaxDamage();
         int referenceDurability = reference.getMaxDamage();
-        if (hoveredDurability > 0 || referenceDurability > 0) {
+        if (hoveredDurability > 0 && referenceDurability > 0) {
             lines.add(new Line("Durability", hoveredDurability, referenceDurability, ""));
         }
 
         Tool hoveredTool = hovered.get(DataComponents.TOOL);
         Tool referenceTool = reference.get(DataComponents.TOOL);
-        if (hoveredTool != null || referenceTool != null) {
-            double hv = hoveredTool != null ? hoveredTool.defaultMiningSpeed() : 0.0;
-            double rv = referenceTool != null ? referenceTool.defaultMiningSpeed() : 0.0;
-            lines.add(new Line("Mining Speed", hv, rv, ""));
+        if (hoveredTool != null && referenceTool != null) {
+            lines.add(new Line("Mining Speed", hoveredTool.defaultMiningSpeed(),
+                    referenceTool.defaultMiningSpeed(), ""));
         }
 
         Map<String, Integer> hoveredEnch = enchantmentLevels(hovered);
@@ -144,7 +152,7 @@ public final class StatCompare {
     }
 
     /** Sums every flat (ADD_VALUE) attribute modifier on the stack, keyed by the attribute's id. */
-    private static Map<String, Double> attributeTotals(ItemStack stack) {
+    private static Map<String, Double> attributeModifierTotals(ItemStack stack) {
         Map<String, Double> totals = new LinkedHashMap<>();
         ItemAttributeModifiers modifiers = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
         if (modifiers == null) {
@@ -160,14 +168,14 @@ public final class StatCompare {
         return totals;
     }
 
-    private static void collectAttributeNames(ItemStack stack, Map<String, Component> names) {
+    private static void collectAttributeHolders(ItemStack stack, Map<String, Holder<Attribute>> holders) {
         ItemAttributeModifiers modifiers = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
         if (modifiers == null) {
             return;
         }
         for (ItemAttributeModifiers.Entry entry : modifiers.modifiers()) {
             Holder<Attribute> holder = entry.attribute();
-            names.putIfAbsent(holder.getRegisteredName(), Component.translatable(holder.value().getDescriptionId()));
+            holders.putIfAbsent(holder.getRegisteredName(), holder);
         }
     }
 
