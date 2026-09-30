@@ -30,11 +30,10 @@ public final class StatCompare {
     /**
      * The item to compare {@code hovered} against, or null if there's nothing sensible to compare
      * it with. Armour (helmet/chestplate/leggings/boots) compares against the equipped piece in
-     * the same slot. Anything else compares against the main hand item, but only when that main
-     * hand item is itself a tool (including weapons like swords, axes and tridents, detected by
-     * having a Tool component or attribute modifiers) - so hovering a random item while your hand
-     * is empty or holding something unrelated shows nothing, but hovering *anything*, tool or not,
-     * while holding a tool shows how it stacks up against what's in your hand.
+     * the same slot. A tool or weapon (swords, axes, tridents and the like, detected by having a
+     * Tool component or attribute modifiers) compares against the main hand item, but only when
+     * that main hand item is itself a tool too - so a random, non-tool item never shows a
+     * comparison, whether it's the one being hovered or the one in your hand.
      */
     public static ItemStack findReference(Player player, ItemStack hovered) {
         Equippable equippable = hovered.get(DataComponents.EQUIPPABLE);
@@ -46,11 +45,15 @@ public final class StatCompare {
             }
             return null;
         }
-        ItemStack mainhand = player.getItemBySlot(EquipmentSlot.MAINHAND);
-        if (mainhand.get(DataComponents.TOOL) != null || mainhand.get(DataComponents.ATTRIBUTE_MODIFIERS) != null) {
-            return mainhand;
+        if (!isTool(hovered)) {
+            return null;
         }
-        return null;
+        ItemStack mainhand = player.getItemBySlot(EquipmentSlot.MAINHAND);
+        return isTool(mainhand) ? mainhand : null;
+    }
+
+    private static boolean isTool(ItemStack stack) {
+        return stack.get(DataComponents.TOOL) != null || stack.get(DataComponents.ATTRIBUTE_MODIFIERS) != null;
     }
 
     public static void appendComparison(List<Component> tooltip, ItemStack hovered, ItemStack reference) {
