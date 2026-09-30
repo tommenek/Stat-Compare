@@ -20,7 +20,7 @@ public class StatCompareClient implements ClientModInitializer {
             Minecraft client = Minecraft.getInstance();
             // only show the comparison while a container/inventory screen is open, so ordinary
             // gameplay (e.g. hovering the hotbar) isn't cluttered with a comparison against itself
-            if (!(client.screen instanceof AbstractContainerScreen)) {
+            if (!(client.gui.screen() instanceof AbstractContainerScreen)) {
                 return;
             }
             LocalPlayer player = client.player;
