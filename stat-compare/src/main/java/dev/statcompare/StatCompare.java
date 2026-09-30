@@ -15,6 +15,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.equipment.Equippable;
 
 /** Works out which item to compare against, and builds the coloured tooltip lines for it. */
@@ -27,8 +29,10 @@ public final class StatCompare {
 
     /**
      * The item to compare {@code hovered} against, or null if it isn't the kind of item this mod
-     * compares (armour compares against the equipped piece in the same slot; weapons and tools,
-     * detected by having a Tool component or attribute modifiers, compare against the main hand).
+     * compares: only armour and tools (which includes weapons like swords, axes and tridents,
+     * detected by having a Tool component or attribute modifiers - the same components that give
+     * them their combat/mining stats in the first place). Armour compares against the equipped
+     * piece in the same slot; tools compare against whatever is in the main hand.
      */
     public static ItemStack findReference(Player player, ItemStack hovered) {
         Equippable equippable = hovered.get(DataComponents.EQUIPPABLE);
@@ -55,6 +59,10 @@ public final class StatCompare {
         tooltip.add(Component.literal("Compared to: " + reference.getHoverName().getString())
                 .withStyle(ChatFormatting.GRAY));
         for (Line line : lines) {
+            if (line == null) {
+                tooltip.add(Component.literal("Enchantments:").withStyle(ChatFormatting.DARK_GRAY));
+                continue;
+            }
             tooltip.add(line.render());
         }
     }
@@ -90,7 +98,49 @@ public final class StatCompare {
             lines.add(new Line("Mining Speed", hv, rv, ""));
         }
 
+        Map<String, Integer> hoveredEnch = enchantmentLevels(hovered);
+        Map<String, Integer> referenceEnch = enchantmentLevels(reference);
+        Map<String, Component> enchNames = new LinkedHashMap<>();
+        collectEnchantmentNames(hovered, enchNames);
+        collectEnchantmentNames(reference, enchNames);
+        boolean enchHeaderAdded = false;
+        for (Map.Entry<String, Component> entry : enchNames.entrySet()) {
+            int hv = hoveredEnch.getOrDefault(entry.getKey(), 0);
+            int rv = referenceEnch.getOrDefault(entry.getKey(), 0);
+            if (hv == 0 && rv == 0) {
+                continue;
+            }
+            if (!enchHeaderAdded) {
+                lines.add(null); // marks a section header; render() below skips it, appendComparison replaces it
+                enchHeaderAdded = true;
+            }
+            lines.add(new Line(entry.getValue().getString(), hv, rv, ""));
+        }
+
         return lines;
+    }
+
+    /** Levels of every enchantment actually applied to the item (not a book's stored ones), by id. */
+    private static Map<String, Integer> enchantmentLevels(ItemStack stack) {
+        Map<String, Integer> levels = new LinkedHashMap<>();
+        ItemEnchantments enchantments = stack.get(DataComponents.ENCHANTMENTS);
+        if (enchantments == null) {
+            return levels;
+        }
+        for (Holder<Enchantment> holder : enchantments.keySet()) {
+            levels.put(holder.getRegisteredName(), enchantments.getLevel(holder));
+        }
+        return levels;
+    }
+
+    private static void collectEnchantmentNames(ItemStack stack, Map<String, Component> names) {
+        ItemEnchantments enchantments = stack.get(DataComponents.ENCHANTMENTS);
+        if (enchantments == null) {
+            return;
+        }
+        for (Holder<Enchantment> holder : enchantments.keySet()) {
+            names.putIfAbsent(holder.getRegisteredName(), holder.value().description());
+        }
     }
 
     /** Sums every flat (ADD_VALUE) attribute modifier on the stack, keyed by the attribute's id. */

@@ -6,8 +6,11 @@ its tooltip:
 
 - **Armour** (helmet, chestplate, leggings, boots) compares against whatever you have
   equipped in that slot.
-- **Weapons and tools** (detected by having attack/mining stats) compare against whatever
-  is in your main hand.
+- **Tools** — including weapons like swords, axes and tridents, detected by having
+  attack/mining stats — compare against whatever is in your main hand.
+
+Press **H** (rebindable under Options > Controls > Key Binds > Stat Compare) to show or
+hide the comparison at any time.
 
 Each line is:
 - **green** if the hovered item is better
@@ -16,8 +19,9 @@ Each line is:
 
 Stats compared: every flat attribute the item carries (attack damage, attack speed, armor,
 armor toughness, knockback resistance, movement speed, etc. — whatever the item has),
-durability, and mining speed for tools. All are treated as "higher is better", which covers
-every vanilla stat in this list.
+durability, mining speed for tools, and the level of every enchantment actually applied to
+the item (not a book's stored enchantments). All are treated as "higher is better", which
+covers every vanilla stat and enchantment level in this list.
 
 Java 25, Fabric Loader 0.19.3+, Fabric API for 26.2.
 
