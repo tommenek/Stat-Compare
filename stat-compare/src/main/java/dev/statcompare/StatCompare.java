@@ -52,8 +52,21 @@ public final class StatCompare {
         return isTool(mainhand) ? mainhand : null;
     }
 
+    /**
+     * Whether this counts as a tool or weapon. Note that every item carries an ATTRIBUTE_MODIFIERS
+     * component, usually an empty one, so a non-null check is not enough - the list has to actually
+     * have something in it. Requiring durability as well rules out blocks and plain materials,
+     * which can carry stray modifiers but are not tools.
+     */
     private static boolean isTool(ItemStack stack) {
-        return stack.get(DataComponents.TOOL) != null || stack.get(DataComponents.ATTRIBUTE_MODIFIERS) != null;
+        if (stack.isEmpty()) {
+            return false;
+        }
+        if (stack.get(DataComponents.TOOL) != null) {
+            return true;
+        }
+        ItemAttributeModifiers modifiers = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
+        return modifiers != null && !modifiers.modifiers().isEmpty() && stack.isDamageableItem();
     }
 
     public static void appendComparison(List<Component> tooltip, ItemStack hovered, ItemStack reference) {
