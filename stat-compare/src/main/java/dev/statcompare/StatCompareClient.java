@@ -1,5 +1,6 @@
 package dev.statcompare;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
@@ -12,7 +13,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Adds a coloured stat comparison to item tooltips while an inventory-like screen is open:
@@ -30,7 +30,7 @@ public class StatCompareClient implements ClientModInitializer {
     /** Shows/hides the comparison lines. Rebindable in Options > Controls > Key Binds. */
     public static final KeyMapping TOGGLE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.statcompare.toggle",
-            GLFW.GLFW_KEY_H,
+            InputConstants.KEY_H,
             CATEGORY));
 
     /** Whether comparison lines are currently shown. */
