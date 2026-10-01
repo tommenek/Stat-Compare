@@ -1,1 +1,2 @@
-net.minecraft.client.KeyMapping KeyMapping\(
+com.mojang.blaze3d.platform.InputConstants KEY_H|KEY_A |Type|getKey
+com.mojang.blaze3d.platform.InputConstants$Type
