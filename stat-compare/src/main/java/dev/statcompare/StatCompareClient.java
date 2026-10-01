@@ -1,16 +1,18 @@
 package dev.statcompare;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * Adds a coloured stat comparison to item tooltips while an inventory-like screen is open:
@@ -28,15 +30,26 @@ public class StatCompareClient implements ClientModInitializer {
     /** Shows/hides the comparison lines. Rebindable in Options > Controls > Key Binds. */
     public static final KeyMapping TOGGLE_KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.statcompare.toggle",
-            InputConstants.Type.KEYSYM,
-            InputConstants.KEY_H,
+            GLFW.GLFW_KEY_H,
             CATEGORY));
 
     /** Whether comparison lines are currently shown. */
     public static boolean enabled = true;
 
+    /** The open screen, tracked via Fabric events since the vanilla accessor differs between versions. */
+    private static Screen currentScreen;
+
     @Override
     public void onInitializeClient() {
+        ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+            currentScreen = screen;
+            ScreenEvents.remove(screen).register(removed -> {
+                if (currentScreen == removed) {
+                    currentScreen = null;
+                }
+            });
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (TOGGLE_KEY.consumeClick()) {
                 enabled = !enabled;
@@ -50,7 +63,7 @@ public class StatCompareClient implements ClientModInitializer {
             Minecraft client = Minecraft.getInstance();
             // only show the comparison while a container/inventory screen is open, so ordinary
             // gameplay (e.g. hovering the hotbar) isn't cluttered with a comparison against itself
-            if (!(client.gui.screen() instanceof AbstractContainerScreen)) {
+            if (!(currentScreen instanceof AbstractContainerScreen)) {
                 return;
             }
             LocalPlayer player = client.player;
