@@ -5,6 +5,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mc: 26.1.2
+            fabric_api: 0.155.3+26.1.2
+            dep: "~26.1"
+          - mc: "26.2"
+            fabric_api: 0.161.0+26.2
+            dep: "~26.2"
+          - mc: "26.3"
+            fabric_api: 0.161.0+26.3
+            dep: "~26.3"
+    name: build (${{ matrix.mc }})
     defaults:
       run:
         working-directory: stat-compare
@@ -20,7 +34,8 @@ jobs:
       - name: Build
         run: |
           set -o pipefail
-          gradle build --stacktrace 2>&1 | tee build.log
+          gradle build --stacktrace -Pminecraft_version=${{ matrix.mc }} \
+            -Pfabric_api_version=${{ matrix.fabric_api }} -Pminecraft_dep='${{ matrix.dep }}' 2>&1 | tee build.log
       - name: Report errors
         if: failure()
         run: |
@@ -52,5 +67,5 @@ jobs:
           done < <(cat .github/api-classes.txt 2>/dev/null)
       - uses: actions/upload-artifact@v5
         with:
-          name: stat-compare-jar
+          name: stat-compare-mc${{ matrix.mc }}
           path: stat-compare/build/libs/*.jar
